@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cosmic Clock 2026</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Tenor+Sans&family=Montserrat:wght@200;300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/datavis/poems/cosmic-clock/bioluminescent-style.css">
+</head>
+<body class="theme-bio">
+
+    <div class="hud-panel time-display">
+        <div class="huge-time" id="clock-display">00:00:00</div>
+        <div class="date-display" id="date-display">...</div>
+        <div class="year-progress" id="progress-display">...</div>
+    </div>
+
+    <div class="theme-selector">
+        <select id="themeSelect">
+            <option value="theme-bio">Bioluminescent</option>
+            <option value="theme-glass">Glassmorphism</option>
+            <option value="theme-glass-frost">Glass Frost</option>
+            <option value="theme-glass-aurora">Glass Aurora</option>
+            <option value="theme-skeuo">Skeuomorphism</option>
+            <option value="theme-skeuo-brass">Skeuo Brass</option>
+            <option value="theme-skeuo-chrome">Skeuo Chrome</option>
+            <option value="theme-skeuo-cockpit">Skeuo Cockpit</option>
+            <option value="theme-skeuo-bronze">Skeuo Bronze</option>
+            <option value="theme-skeuo-copper">Skeuo Copper</option>
+            <option value="theme-skeuo-titanium">Skeuo Titanium</option>
+            <option value="theme-skeuo-rosegold">Skeuo Rose Gold</option>
+            <option value="theme-skeuo-gunmetal">Skeuo Gunmetal</option>
+            <option value="theme-skeuo-platinum">Skeuo Platinum</option>
+            <option value="theme-skeuo-obsidian">Skeuo Obsidian</option>
+            <option value="theme-skeuo-amber">Skeuo Amber</option>
+            <option value="theme-skeuo-jade">Skeuo Jade</option>
+            <option value="theme-skeuo-onyx">Skeuo Onyx</option>
+            <option value="theme-swiss">Swiss Design</option>
+            <option value="theme-swiss-railway">Swiss Railway</option>
+            <option value="theme-swiss-poster">Swiss Poster</option>
+            <option value="theme-neu">Neumorphism</option>
+            <option value="theme-neu-light">Neu Light</option>
+            <option value="theme-neu-dark">Neu Dark</option>
+        </select>
+    </div>
+
+    <div class="legend-key">
+        <div class="key-item"><div class="key-dot" style="background: #ef4444"></div>Time</div>
+        <div class="key-item"><div class="key-dot" style="background: #10b981"></div>Calendar</div>
+        <div class="key-item"><div class="key-dot" style="background: #f59e0b"></div>Celestial</div>
+        <div class="key-item"><div class="key-dot" style="background: #ec4899"></div>Holidays</div>
+        <div class="key-item"><div class="key-dot" style="background: #6366f1"></div>Sports</div>
+        <div class="key-item"><div class="key-dot" style="background: #a855f7"></div>Astronomical</div>
+    </div>
+
+    <a href="#" class="info-icon" id="infoIcon"><i class="fa-solid fa-info"></i></a>
+    <div class="info-popup" id="infoPopup">
+        <div class="info-popup-title">Cosmic Oracle</div>
+        <a href="https://lukesteuber.com" target="_blank">lukesteuber.com</a>
+        <a href="https://dr.eamer.dev" target="_blank">dr.eamer.dev</a>
+        <div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 10px;">
+            Mode: Gyro-Synchronized<br>Epoch: 2026<br>Loc: Global Constant
+        </div>
+    </div>
+
+    <canvas id="canvas"></canvas>
+    <div id="tooltip"></div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const tooltip = document.getElementById('tooltip');
+        const themeSelect = document.getElementById('themeSelect');
+        
+        let width, height, cx, cy;
+        let dpr = window.devicePixelRatio || 1;
+        let interactionPos = null;
+        let currentTheme = 'theme-bio';
+
+        // Theme configurations for canvas rendering
+        const themeConfigs = {
+            'theme-bio': {
+                ringColors: { time: '#ef4444', calendar: '#10b981', celestial: '#f59e0b', events: '#3b82f6' },
+                bgColor: '#050505',
+                textColor: '#ffffff',
+                textDim: 'rgba(255,255,255,0.5)',
+                lineColor: 'rgba(255,255,255,0.3)',
+                centerColor: '#ef4444',
+                glowEnabled: true,
+                shadowBlur: 15,
+                ringStyle: 'glow', // glow, flat, beveled, soft
+                ringOpacity: 0.12,
+                activeOpacity: 1.0
+            },
+            'theme-glass': {
+                ringColors: { time: '#60a5fa', calendar: '#34d399', celestial: '#fbbf24', events: '#a78bfa' },
+                bgColor: '#1a1c2c',
+                textColor: '#ffffff',
+                textDim: 'rgba(255,255,255,0.4)',
+                lineColor: 'rgba(255,255,255,0.2)',
+                centerColor: '#60a5fa',
+                glowEnabled: true,
+                shadowBlur: 20,
+                ringStyle: 'glow',
+                ringOpacity: 0.08,
+                activeOpacity: 0.9
+            },
+            'theme-glass-frost': {
+                ringColors: { time: '#0984e3', calendar: '#00b894', celestial: '#fdcb6e', events: '#6c5ce7' },
+                bgColor: '#dfe6e9',
+                textColor: '#2d3436',
+                textDim: 'rgba(45,52,54,0.5)',
+                lineColor: 'rgba(45,52,54,0.2)',
+                centerColor: '#0984e3',
+                glowEnabled: false,
+                shadowBlur: 8,
+                ringStyle: 'soft',
+                ringOpacity: 0.15,
+                activeOpacity: 0.7
+            },
+            'theme-glass-aurora': {
+                ringColors: { time: '#00d9ff', calendar: '#00ffa3', celestial: '#ff00ff', events: '#7c3aed' },
+                bgColor: '#0f0f23',
+                textColor: '#ffffff',
+                textDim: 'rgba(255,255,255,0.5)',
+                lineColor: 'rgba(0,217,255,0.3)',
+                centerColor: '#00d9ff',
+                glowEnabled: true,
+                shadowBlur: 25,
+                ringStyle: 'aurora',
+                ringOpacity: 0.1,
+                activeOpacity: 1.0
+            },
+            'theme-skeuo': {
+                ringColors: { time: '#ff6b6b', calendar: '#4ecdc4', celestial: '#ffe66d', events: '#6b5b95' },
+                bgColor: '#1a1a1a',
+                textColor: '#f0f0f0',
+                textDim: 'rgba(240,240,240,0.6)',
+                lineColor: 'rgba(255,255,255,0.2)',
+                centerColor: '#ff6b6b',
+                glowEnabled: false,
+                shadowBlur: 0,
+                ringStyle: 'beveled',
+                ringOpacity: 0.25,
+                activeOpacity: 1.0,
+                bezelWidth: 3,
+                bezelLight: 'rgba(255,255,255,0.4)',
+                bezelDark: 'rgba(0,0,0,0.6)'
+            },
+            'theme-skeuo-brass': {
+                ringColors: { time: '#ffd700', calendar: '#50c878', celestial: '#ff8c00', events: '#4169e1' },
+                bgColor: '#1a1408',
+                textColor: '#f4d794',
+                textDim: 'rgba(244,215,148,0.6)',
+                lineColor: 'rgba(255,215,0,0.25)',
+                centerColor: '#ffd700',
+                glowEnabled: true,
+                shadowBlur: 15,
+                ringStyle: 'beveled',
+                ringOpacity: 0.28,
+                activeOpacity: 1.0,
+                bezelWidth: 3,
+                bezelLight: 'rgba(255,215,0,0.5)',
+                bezelDark: 'rgba(0,0,0,0.65)'
+            },
+            'theme-skeuo-chrome': {
+                ringColors: { time: '#00bfff', calendar: '#7fff00', celestial: '#ff1493', events: '#9370db' },
+                bgColor: '#12151a',
+                textColor: '#e8ecf0',
+                textDim: 'rgba(232,236,240,0.6)',
+                lineColor: 'rgba(0,191,255,0.2)',
+                centerColor: '#00bfff',
+                glowEnabled: true,
+                shadowBlur: 8,
+                ringStyle: 'beveled',
+                ringOpacity: 0.22,
+                activeOpacity: 1.0,
+                bezelWidth: 3,
+                bezelLight: 'rgba(255,255,255,0.45)',
+                bezelDark: 'rgba(0,0,0,0.55)'
+            },
+            'theme-skeuo-cockpit': {
+                ringColors: { time: '#00ff00', calendar: '#00ffff', celestial: '#ff4500', events: '#ffff00' },
+                bgColor: '#0a0a08',
+                textColor: '#00ff00',
+                textDim: 'rgba(0,255,0,0.6)',
+                lineColor: 'rgba(0,255,0,0.35)',
+                centerColor: '#ff4500',
+                glowEnabled: true,
+                shadowBlur: 18,
+                ringStyle: 'cockpit',
+                ringOpacity: 0.18,
+                activeOpacity: 1.0,
+                bezelWidth: 2,
+                bezelLight: 'rgba(0,255,0,0.4)',
+                bezelDark: 'rgba(0,0,0,0.75)'
+            },
+            'theme-skeuo-bronze': {
+                ringColors: { time: '#cd7f32', calendar: '#228b22', celestial: '#daa520', events: '#4682b4' },
+                bgColor: '#151210',
+                textColor: '#deb887',
+                textDim: 'rgba(222,184,135,0.6)',
+                lineColor: 'rgba(205,127,50,0.25)',
+                centerColor: '#cd7f32',
+                glowEnabled: true,
+                shadowBlur: 12,
+                ringStyle: 'beveled',
+                ringOpacity: 0.26,
+                activeOpacity: 1.0,
+                bezelWidth: 4,
+                bezelLight: 'rgba(222,184,135,0.5)',
+                bezelDark: 'rgba(0,0,0,0.6)'
+            },
+            'theme-skeuo-copper': {
+                ringColors: { time: '#ff7f50', calendar: '#20b2aa', celestial: '#ffa07a', events: '#6495ed' },
+                bgColor: '#18100e',
+                textColor: '#f4a460',
+                textDim: 'rgba(244,164,96,0.6)',
+                lineColor: 'rgba(255,127,80,0.25)',
+                centerColor: '#ff7f50',
+                glowEnabled: true,
+                shadowBlur: 20,
+                ringStyle: 'beveled',
+                ringOpacity: 0.24,
+                activeOpacity: 1.0,
+                bezelWidth: 3,
+                bezelLight: 'rgba(255,160,122,0.5)',
+                bezelDark: 'rgba(0,0,0,0.55)'
+            },
+            'theme-skeuo-titanium': {
+                ringColors: { time: '#87ceeb', calendar: '#98fb98', celestial: '#dda0dd', events: '#f0e68c' },
+                bgColor: '#101418',
+                textColor: '#d3d3d3',
+                textDim: 'rgba(211,211,211,0.6)',
+                lineColor: 'rgba(135,206,235,0.2)',
+                centerColor: '#87ceeb',
+                glowEnabled: false,
+                shadowBlur: 0,
+                ringStyle: 'beveled',
+                ringOpacity: 0.22,
+                activeOpacity: 1.0,
+                bezelWidth: 2,
+                bezelLight: 'rgba(211,211,211,0.35)',
+                bezelDark: 'rgba(0,0,0,0.55)'
+            },
+            'theme-skeuo-rosegold': {
+                ringColors: { time: '#ffb6c1', calendar: '#98d8c8', celestial: '#f7dc6f', events: '#bb8fce' },
+                bgColor: '#1a1214',
+                textColor: '#ffc0cb',
+                textDim: 'rgba(255,192,203,0.6)',
+                lineColor: 'rgba(255,182,193,0.25)',
+                centerColor: '#ff69b4',
+                glowEnabled: true,
+                shadowBlur: 14,
+                ringStyle: 'beveled',
+                ringOpacity: 0.24,
+                activeOpacity: 1.0,
+                bezelWidth: 2,
+                bezelLight: 'rgba(255,192,203,0.45)',
+                bezelDark: 'rgba(0,0,0,0.5)'
+            },
+            'theme-skeuo-gunmetal': {
+                ringColors: { time: '#dc143c', calendar: '#32cd32', celestial: '#ffa500', events: '#1e90ff' },
+                bgColor: '#0e1012',
+                textColor: '#a9a9a9',
+                textDim: 'rgba(169,169,169,0.6)',
+                lineColor: 'rgba(169,169,169,0.15)',
+                centerColor: '#dc143c',
+                glowEnabled: false,
+                shadowBlur: 0,
+                ringStyle: 'beveled',
+                ringOpacity: 0.24,
+                activeOpacity: 1.0,
+                bezelWidth: 4,
+                bezelLight: 'rgba(169,169,169,0.25)',
+                bezelDark: 'rgba(0,0,0,0.7)'
+            },
+            'theme-skeuo-platinum': {
+                ringColors: { time: '#4169e1', calendar: '#2e8b57', celestial: '#ff6347', events: '#9932cc' },
+                bgColor: '#f5f5f5',
+                textColor: '#2f4f4f',
+                textDim: 'rgba(47,79,79,0.6)',
+                lineColor: 'rgba(65,105,225,0.2)',
+                centerColor: '#4169e1',
+                glowEnabled: false,
+                shadowBlur: 0,
+                ringStyle: 'beveled',
+                ringOpacity: 0.3,
+                activeOpacity: 0.9,
+                bezelWidth: 2,
+                bezelLight: 'rgba(255,255,255,0.9)',
+                bezelDark: 'rgba(0,0,0,0.2)'
+            },
+            'theme-skeuo-obsidian': {
+                ringColors: { time: '#9400d3', calendar: '#00ced1', celestial: '#ff00ff', events: '#7b68ee' },
+                bgColor: '#080808',
+                textColor: '#e6e6fa',
+                textDim: 'rgba(230,230,250,0.6)',
+                lineColor: 'rgba(148,0,211,0.25)',
+                centerColor: '#9400d3',
+                glowEnabled: true,
+                shadowBlur: 25,
+                ringStyle: 'beveled',
+                ringOpacity: 0.2,
+                activeOpacity: 1.0,
+                bezelWidth: 2,
+                bezelLight: 'rgba(230,230,250,0.2)',
+                bezelDark: 'rgba(0,0,0,0.75)'
+            },
+            'theme-skeuo-amber': {
+                ringColors: { time: '#ff8c00', calendar: '#32cd32', celestial: '#ffd700', events: '#ff4500' },
+                bgColor: '#141008',
+                textColor: '#ffd700',
+                textDim: 'rgba(255,215,0,0.6)',
+                lineColor: 'rgba(255,140,0,0.3)',
+                centerColor: '#ff8c00',
+                glowEnabled: true,
+                shadowBlur: 22,
+                ringStyle: 'beveled',
+                ringOpacity: 0.24,
+                activeOpacity: 1.0,
+                bezelWidth: 3,
+                bezelLight: 'rgba(255,215,0,0.55)',
+                bezelDark: 'rgba(0,0,0,0.55)'
+            },
+            'theme-skeuo-jade': {
+                ringColors: { time: '#00fa9a', calendar: '#40e0d0', celestial: '#adff2f', events: '#00bfff' },
+                bgColor: '#080f0c',
+                textColor: '#98fb98',
+                textDim: 'rgba(152,251,152,0.6)',
+                lineColor: 'rgba(0,250,154,0.25)',
+                centerColor: '#00fa9a',
+                glowEnabled: true,
+                shadowBlur: 15,
+                ringStyle: 'beveled',
+                ringOpacity: 0.22,
+                activeOpacity: 1.0,
+                bezelWidth: 3,
+                bezelLight: 'rgba(152,251,152,0.45)',
+                bezelDark: 'rgba(0,0,0,0.6)'
+            },
+            'theme-skeuo-onyx': {
+                ringColors: { time: '#ffd700', calendar: '#c0c0c0', celestial: '#ff0000', events: '#00ffff' },
+                bgColor: '#050505',
+                textColor: '#ffd700',
+                textDim: 'rgba(255,215,0,0.6)',
+                lineColor: 'rgba(255,215,0,0.3)',
+                centerColor: '#ffd700',
+                glowEnabled: true,
+                shadowBlur: 18,
+                ringStyle: 'beveled',
+                ringOpacity: 0.2,
+                activeOpacity: 1.0,
+                bezelWidth: 3,
+                bezelLight: 'rgba(255,215,0,0.45)',
+                bezelDark: 'rgba(0,0,0,0.7)'
+            },
+            'theme-swiss': {
+                ringColors: { time: '#d52b1e', calendar: '#000000', celestial: '#d52b1e', events: '#000000' },
+                bgColor: '#f0f0f0',
+                textColor: '#000000',
+                textDim: 'rgba(0,0,0,0.5)',
+                lineColor: 'rgba(0,0,0,0.2)',
+                centerColor: '#d52b1e',
+                glowEnabled: false,
+                shadowBlur: 0,
+                ringStyle: 'flat',
+                ringOpacity: 0.15,
+                activeOpacity: 1.0
+            },
+            'theme-swiss-railway': {
+                ringColors: { time: '#ff0000', calendar: '#000000', celestial: '#000000', events: '#ff0000' },
+                bgColor: '#ffffff',
+                textColor: '#000000',
+                textDim: 'rgba(0,0,0,0.4)',
+                lineColor: 'rgba(0,0,0,0.15)',
+                centerColor: '#ff0000',
+                glowEnabled: false,
+                shadowBlur: 0,
+                ringStyle: 'flat',
+                ringOpacity: 0.1,
+                activeOpacity: 1.0,
+                secondHand: true
+            },
+            'theme-swiss-poster': {
+                ringColors: { time: '#ff3b30', calendar: '#ffffff', celestial: '#ff3b30', events: '#ffffff' },
+                bgColor: '#1a1a1a',
+                textColor: '#ffffff',
+                textDim: 'rgba(255,255,255,0.5)',
+                lineColor: 'rgba(255,59,48,0.4)',
+                centerColor: '#ff3b30',
+                glowEnabled: true,
+                shadowBlur: 10,
+                ringStyle: 'bold',
+                ringOpacity: 0.15,
+                activeOpacity: 1.0
+            },
+            'theme-neu': {
+                ringColors: { time: '#6d5dfc', calendar: '#a3b1c6', celestial: '#6d5dfc', events: '#a3b1c6' },
+                bgColor: '#e0e5ec',
+                textColor: '#444444',
+                textDim: 'rgba(68,68,68,0.5)',
+                lineColor: 'rgba(68,68,68,0.15)',
+                centerColor: '#6d5dfc',
+                glowEnabled: false,
+                shadowBlur: 0,
+                ringStyle: 'neumorphic',
+                ringOpacity: 0.2,
+                activeOpacity: 0.8,
+                neuLightShadow: 'rgba(255,255,255,0.7)',
+                neuDarkShadow: 'rgba(163,177,198,0.7)'
+            },
+            'theme-neu-light': {
+                ringColors: { time: '#6d5dfc', calendar: '#7f8c8d', celestial: '#9b59b6', events: '#3498db' },
+                bgColor: '#e0e5ec',
+                textColor: '#444444',
+                textDim: 'rgba(68,68,68,0.5)',
+                lineColor: 'rgba(68,68,68,0.1)',
+                centerColor: '#6d5dfc',
+                glowEnabled: false,
+                shadowBlur: 0,
+                ringStyle: 'neumorphic',
+                ringOpacity: 0.25,
+                activeOpacity: 0.85,
+                neuLightShadow: 'rgba(255,255,255,0.8)',
+                neuDarkShadow: 'rgba(163,177,198,0.6)'
+            },
+            'theme-neu-dark': {
+                ringColors: { time: '#7c6aef', calendar: '#5a5a6e', celestial: '#9b7aef', events: '#6a6aef' },
+                bgColor: '#2d2d3a',
+                textColor: '#e0e0e0',
+                textDim: 'rgba(224,224,224,0.5)',
+                lineColor: 'rgba(224,224,224,0.1)',
+                centerColor: '#7c6aef',
+                glowEnabled: false,
+                shadowBlur: 0,
+                ringStyle: 'neumorphic-dark',
+                ringOpacity: 0.2,
+                activeOpacity: 0.9,
+                neuLightShadow: 'rgba(60,60,80,0.5)',
+                neuDarkShadow: 'rgba(0,0,0,0.6)'
+            }
+        };
+
+        function getThemeConfig() {
+            return themeConfigs[currentTheme] || themeConfigs['theme-bio'];
+        }
+
+        themeSelect.addEventListener('change', (e) => {
+            document.body.className = e.target.value;
+            currentTheme = e.target.value;
+        });
+
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            canvas.style.width = `${width}px`;
+            canvas.style.height = `${height}px`;
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.scale(dpr, dpr);
+            cx = width / 2;
+            cy = height / 2;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // Event type colors
+        const eventColors = {
+            meteor: '#a855f7',      // Purple
+            eclipse: '#ef4444',     // Red
+            equinox: '#22c55e',     // Green
+            solstice: '#f59e0b',    // Amber
+            lunar: '#e0e7ff',       // Light blue
+            olympics: '#0ea5e9',    // Sky blue
+            worldcup: '#10b981',    // Emerald
+            sports: '#6366f1',      // Indigo
+            holiday: '#ec4899',     // Pink
+            political: '#64748b',   // Slate
+        };
+
+        // Expanded events database
+        const eventsData = {
+            astronomical: [
+                { date: new Date(2026, 0, 3), name: "Quadrantids Meteor Shower Peak", type: 'meteor' },
+                { date: new Date(2026, 0, 21), name: "Full Moon (Wolf Moon)", type: 'lunar' },
+                { date: new Date(2026, 1, 17), name: "Annular Solar Eclipse", type: 'eclipse' },
+                { date: new Date(2026, 2, 20), name: "Spring Equinox", type: 'equinox' },
+                { date: new Date(2026, 3, 22), name: "Lyrids Meteor Shower Peak", type: 'meteor' },
+                { date: new Date(2026, 4, 6), name: "Eta Aquariids Meteor Shower", type: 'meteor' },
+                { date: new Date(2026, 5, 21), name: "Summer Solstice", type: 'solstice' },
+                { date: new Date(2026, 7, 12), name: "Perseids Meteor Shower Peak", type: 'meteor' },
+                { date: new Date(2026, 7, 12), name: "Total Lunar Eclipse", type: 'eclipse' },
+                { date: new Date(2026, 8, 22), name: "Autumn Equinox", type: 'equinox' },
+                { date: new Date(2026, 9, 21), name: "Orionids Meteor Shower Peak", type: 'meteor' },
+                { date: new Date(2026, 10, 17), name: "Leonids Meteor Shower Peak", type: 'meteor' },
+                { date: new Date(2026, 11, 13), name: "Geminids Meteor Shower Peak", type: 'meteor' },
+                { date: new Date(2026, 11, 21), name: "Winter Solstice", type: 'solstice' },
+            ],
+            sports: [
+                { date: new Date(2026, 1, 6), name: "Winter Olympics Opening (Milan)", type: 'olympics' },
+                { date: new Date(2026, 1, 8), name: "Super Bowl LX", type: 'sports' },
+                { date: new Date(2026, 3, 6), name: "The Masters Golf", type: 'sports' },
+                { date: new Date(2026, 5, 11), name: "FIFA World Cup Opening (USA)", type: 'worldcup' },
+                { date: new Date(2026, 5, 29), name: "Wimbledon Begins", type: 'sports' },
+                { date: new Date(2026, 6, 19), name: "FIFA World Cup Final", type: 'worldcup' },
+                { date: new Date(2026, 9, 1), name: "MLB World Series", type: 'sports' },
+            ],
+            cultural: [
+                { date: new Date(2026, 0, 1), name: "New Year's Day", type: 'holiday' },
+                { date: new Date(2026, 0, 19), name: "Martin Luther King Jr. Day", type: 'holiday' },
+                { date: new Date(2026, 0, 26), name: "Australia Day", type: 'holiday' },
+                { date: new Date(2026, 0, 29), name: "Chinese New Year (Horse)", type: 'holiday' },
+                { date: new Date(2026, 1, 14), name: "Valentine's Day", type: 'holiday' },
+                { date: new Date(2026, 2, 17), name: "St. Patrick's Day", type: 'holiday' },
+                { date: new Date(2026, 3, 5), name: "Easter Sunday", type: 'holiday' },
+                { date: new Date(2026, 3, 22), name: "Earth Day", type: 'holiday' },
+                { date: new Date(2026, 4, 5), name: "Cinco de Mayo", type: 'holiday' },
+                { date: new Date(2026, 4, 10), name: "Mother's Day (US)", type: 'holiday' },
+                { date: new Date(2026, 4, 25), name: "Memorial Day", type: 'holiday' },
+                { date: new Date(2026, 5, 21), name: "Father's Day (US)", type: 'holiday' },
+                { date: new Date(2026, 6, 1), name: "Canada Day", type: 'holiday' },
+                { date: new Date(2026, 6, 4), name: "US Independence Day", type: 'holiday' },
+                { date: new Date(2026, 6, 14), name: "Bastille Day", type: 'holiday' },
+                { date: new Date(2026, 8, 7), name: "Labor Day (US)", type: 'holiday' },
+                { date: new Date(2026, 9, 12), name: "Columbus Day", type: 'holiday' },
+                { date: new Date(2026, 9, 31), name: "Halloween", type: 'holiday' },
+                { date: new Date(2026, 10, 3), name: "US Midterm Elections", type: 'political' },
+                { date: new Date(2026, 10, 11), name: "Veterans Day", type: 'holiday' },
+                { date: new Date(2026, 10, 26), name: "Thanksgiving (US)", type: 'holiday' },
+                { date: new Date(2026, 11, 25), name: "Christmas Day", type: 'holiday' },
+                { date: new Date(2026, 11, 31), name: "New Year's Eve", type: 'holiday' },
+            ]
+        };
+
+        // Flatten for rendering
+        const allEvents = [
+            ...eventsData.astronomical,
+            ...eventsData.sports,
+            ...eventsData.cultural
+        ].sort((a,b) => a.date - b.date);
+
+        // Accurate zodiac constellation data
+        const zodiacData = [
+            {
+                name: "Aries", start: 80,
+                stars: [[0.3,0.2],[0.5,0.35],[0.7,0.5],[0.65,0.7]],
+                lines: [[0,1],[1,2],[2,3]]
+            },
+            {
+                name: "Taurus", start: 110,
+                stars: [[0.15,0.4],[0.3,0.45],[0.45,0.5],[0.6,0.45],[0.75,0.35],[0.5,0.6],[0.55,0.75]],
+                lines: [[0,1],[1,2],[2,3],[3,4],[2,5],[5,6]]
+            },
+            {
+                name: "Gemini", start: 141,
+                stars: [[0.25,0.15],[0.35,0.3],[0.3,0.5],[0.25,0.7],[0.75,0.15],[0.65,0.3],[0.7,0.5],[0.75,0.7]],
+                lines: [[0,1],[1,2],[2,3],[4,5],[5,6],[6,7],[1,5]]
+            },
+            {
+                name: "Cancer", start: 172,
+                stars: [[0.3,0.3],[0.45,0.45],[0.55,0.45],[0.7,0.3],[0.5,0.65]],
+                lines: [[0,1],[1,2],[2,3],[1,4],[2,4]]
+            },
+            {
+                name: "Leo", start: 204,
+                stars: [[0.2,0.35],[0.35,0.2],[0.5,0.25],[0.65,0.35],[0.7,0.5],[0.55,0.65],[0.4,0.6],[0.3,0.5]],
+                lines: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,0]]
+            },
+            {
+                name: "Virgo", start: 235,
+                stars: [[0.2,0.3],[0.35,0.4],[0.5,0.35],[0.65,0.25],[0.55,0.55],[0.7,0.7],[0.4,0.65]],
+                lines: [[0,1],[1,2],[2,3],[2,4],[4,5],[4,6],[1,6]]
+            },
+            {
+                name: "Libra", start: 266,
+                stars: [[0.3,0.3],[0.5,0.4],[0.7,0.3],[0.35,0.65],[0.65,0.65]],
+                lines: [[0,1],[1,2],[0,3],[2,4],[3,4]]
+            },
+            {
+                name: "Scorpio", start: 297,
+                stars: [[0.15,0.4],[0.25,0.5],[0.4,0.55],[0.55,0.5],[0.7,0.45],[0.8,0.35],[0.85,0.5],[0.75,0.6]],
+                lines: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7]]
+            },
+            {
+                name: "Sagittarius", start: 327,
+                stars: [[0.3,0.7],[0.4,0.5],[0.5,0.55],[0.6,0.45],[0.7,0.3],[0.55,0.35],[0.45,0.4]],
+                lines: [[0,1],[1,2],[2,3],[3,4],[3,5],[5,6],[6,1]]
+            },
+            {
+                name: "Capricorn", start: 356,
+                stars: [[0.2,0.35],[0.35,0.3],[0.55,0.35],[0.7,0.45],[0.75,0.6],[0.55,0.7],[0.35,0.6]],
+                lines: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,0]]
+            },
+            {
+                name: "Aquarius", start: 20,
+                stars: [[0.2,0.3],[0.35,0.35],[0.5,0.4],[0.65,0.35],[0.8,0.4],[0.45,0.55],[0.55,0.65],[0.65,0.75]],
+                lines: [[0,1],[1,2],[2,3],[3,4],[2,5],[5,6],[6,7]]
+            },
+            {
+                name: "Pisces", start: 50,
+                stars: [[0.15,0.5],[0.3,0.4],[0.45,0.45],[0.55,0.5],[0.7,0.55],[0.8,0.45],[0.5,0.65]],
+                lines: [[0,1],[1,2],[2,3],[3,4],[4,5],[2,6],[3,6]]
+            }
+        ].sort((a,b) => a.start - b.start);
+
+        const rings = [
+            { id: 'min', divisions: 60, r: 0.18, w: 12, color: '#ef4444', static: true },
+            { id: 'hr',  divisions: 24, r: 0.24, w: 14, color: '#ef4444', static: true },
+            { id: 'wday', divisions: 7, r: 0.32, w: 20, color: '#10b981', labels: ['SUN','MON','TUE','WED','THU','FRI','SAT'] },
+            { id: 'day',  divisions: 31, r: 0.38, w: 15, color: '#10b981' },
+            { id: 'month', divisions: 12, r: 0.44, w: 25, color: '#10b981', labels: ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'] },
+            { id: 'lunar', divisions: 29, r: 0.52, w: 20, color: '#f59e0b', type: 'lunar' },
+            { id: 'zodiac', divisions: 12, r: 0.65, w: 60, color: '#f59e0b', type: 'zodiac' },
+            { id: 'events', divisions: 365, r: 0.78, w: 10, color: '#3b82f6', type: 'events' }
+        ];
+
+        function getMoonPhase(date) {
+            const knownNewMoon = new Date(2026, 0, 18).getTime();
+            const now = date.getTime();
+            const diffDays = (now - knownNewMoon) / (1000 * 60 * 60 * 24);
+            const cycle = 29.53059;
+            let phase = (diffDays % cycle) / cycle;
+            if (phase < 0) phase += 1;
+            return phase;
+        }
+
+        let hoveredRingId = null;
+        let hoveredSegmentIdx = null;
+
+        // Helper to get ring color based on theme and ring type
+        function getRingColor(ring, theme) {
+            if (['ms', 'min', 'hr'].includes(ring.id)) return theme.ringColors.time;
+            if (['wday', 'day', 'month'].includes(ring.id)) return theme.ringColors.calendar;
+            if (['lunar', 'zodiac'].includes(ring.id) || ring.type === 'lunar' || ring.type === 'zodiac') return theme.ringColors.celestial;
+            if (ring.type === 'events') return theme.ringColors.events;
+            return ring.color;
+        }
+
+        // Draw ring with theme-specific style
+        function drawThemedRing(r, w, color, progress, theme, isHovered) {
+            const style = theme.ringStyle;
+
+            // Background ring (track)
+            ctx.beginPath();
+            ctx.arc(0, 0, r, 0, Math.PI * 2);
+            ctx.strokeStyle = color;
+            ctx.globalAlpha = isHovered ? theme.ringOpacity * 2.5 : theme.ringOpacity;
+            ctx.lineWidth = w;
+
+            if (style === 'neumorphic' || style === 'neumorphic-dark') {
+                // Draw inset shadow effect for neumorphism
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = theme.neuDarkShadow;
+                ctx.shadowOffsetX = 3;
+                ctx.shadowOffsetY = 3;
+                ctx.stroke();
+                ctx.shadowOffsetX = -3;
+                ctx.shadowOffsetY = -3;
+                ctx.shadowColor = theme.neuLightShadow;
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 0;
+            } else if (style === 'cockpit') {
+                // Retro CRT/cockpit gauge style with scanline effect
+                ctx.stroke();
+                // Add subtle glow around the ring
+                ctx.shadowBlur = 6;
+                ctx.shadowColor = color;
+                ctx.beginPath();
+                ctx.arc(0, 0, r, 0, Math.PI * 2);
+                ctx.strokeStyle = color;
+                ctx.globalAlpha = 0.15;
+                ctx.lineWidth = w + 4;
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+                ctx.globalAlpha = 1.0;
+            } else if (style === 'beveled') {
+                // Skeuomorphic beveled edge
+                ctx.stroke();
+                ctx.globalAlpha = 1;
+                // Inner bevel (light)
+                ctx.beginPath();
+                ctx.arc(0, 0, r - w/2 + 1, 0, Math.PI * 2);
+                ctx.strokeStyle = theme.bezelLight;
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                // Outer bevel (dark)
+                ctx.beginPath();
+                ctx.arc(0, 0, r + w/2 - 1, 0, Math.PI * 2);
+                ctx.strokeStyle = theme.bezelDark;
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            } else {
+                ctx.stroke();
+            }
+            ctx.globalAlpha = 1.0;
+
+            // Progress arc (filled portion)
+            if (progress > 0 && progress <= 1) {
+                ctx.beginPath();
+                const startA = -Math.PI/2;
+                const endA = startA + (progress * Math.PI * 2);
+                ctx.arc(0, 0, r, startA, endA);
+                ctx.strokeStyle = color;
+                ctx.globalAlpha = theme.activeOpacity;
+                ctx.lineWidth = w;
+
+                if (style === 'glow' && theme.glowEnabled) {
+                    ctx.shadowBlur = theme.shadowBlur;
+                    ctx.shadowColor = color;
+                }
+                if (style === 'aurora') {
+                    ctx.shadowBlur = 20;
+                    ctx.shadowColor = color;
+                    ctx.lineWidth = w + 2;
+                }
+                if (style === 'bold') {
+                    ctx.lineWidth = w + 4;
+                }
+
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+                ctx.globalAlpha = 1.0;
+            }
+        }
+
+        function draw() {
+            const theme = getThemeConfig();
+
+            ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.scale(dpr, dpr);
+            ctx.fillStyle = theme.bgColor;
+            ctx.fillRect(0, 0, width, height);
+
+            const now = new Date();
+            const ms = now.getMilliseconds();
+            const sec = now.getSeconds();
+            const minProgress = now.getMinutes() + sec/60;
+            const hrProgress = now.getHours() + minProgress/60;
+            const dayOfYear = (now - new Date(now.getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24);
+            const yearProgress = dayOfYear / 365;
+
+            document.getElementById('clock-display').innerText = now.toLocaleTimeString('en-GB');
+            document.getElementById('date-display').innerText = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            document.getElementById('progress-display').innerText = `YEAR PROGRESS: ${(yearProgress*100).toFixed(4)}%`;
+
+            const maxR = Math.min(width, height) / 2 * (width < 768 ? 0.82 : 0.9);
+
+            // Reading Line
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - maxR * 0.05);
+            ctx.lineTo(cx, cy - maxR * 0.85);
+            ctx.lineWidth = theme.ringStyle === 'flat' ? 2 : 1;
+            ctx.strokeStyle = theme.lineColor;
+            ctx.stroke();
+
+            rings.forEach(ring => {
+                const r = ring.r * maxR;
+                const w = ring.w;
+                const isHoveredRing = hoveredRingId === ring.id;
+                const ringColor = getRingColor(ring, theme);
+
+                let val = 0;
+                if (ring.id === 'min') val = minProgress / 60;
+                else if (ring.id === 'hr') val = hrProgress / 24;
+                else if (ring.id === 'wday') val = (now.getDay() + hrProgress/24) / 7;
+                else if (ring.id === 'day') val = (now.getDate() - 1 + hrProgress/24) / 31;
+                else if (ring.id === 'month') val = (now.getMonth() + (now.getDate()-1)/31) / 12;
+                else if (['lunar', 'zodiac', 'events'].includes(ring.type)) val = yearProgress;
+
+                let rotation = ring.static ? 0 : -val * Math.PI * 2;
+
+                ctx.save();
+                ctx.translate(cx, cy);
+                ctx.rotate(rotation);
+
+                // Draw themed ring (background track + progress)
+                if (['ms','min','hr','wday','day','month'].includes(ring.id)) {
+                    drawThemedRing(r, w, ringColor, val, theme, isHoveredRing);
+                } else {
+                    // For special rings (lunar, zodiac, events), just draw background
+                    drawThemedRing(r, w, ringColor, 0, theme, isHoveredRing);
+                }
+
+                // Hover highlight for hovered segment
+                if (isHoveredRing && hoveredSegmentIdx !== null) {
+                    const a1 = (hoveredSegmentIdx / ring.divisions) * Math.PI * 2 - Math.PI/2;
+                    const a2 = ((hoveredSegmentIdx + 1) / ring.divisions) * Math.PI * 2 - Math.PI/2;
+                    ctx.beginPath(); ctx.arc(0, 0, r, a1, a2);
+                    ctx.strokeStyle = theme.textColor; ctx.lineWidth = w + 6;
+                    if (theme.glowEnabled) {
+                        ctx.shadowBlur = 15; ctx.shadowColor = theme.textColor;
+                    }
+                    ctx.stroke();
+                    ctx.shadowBlur = 0;
+                }
+
+                if (ring.labels) {
+                    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+                    ring.labels.forEach((label, i) => {
+                        const a = ((i + 0.5) / ring.divisions) * Math.PI * 2 - Math.PI/2;
+                        let diff = Math.abs((i/ring.divisions) - val);
+                        if (diff > 0.5) diff = 1 - diff;
+                        const isNow = diff < (0.5 / ring.divisions);
+                        ctx.fillStyle = isNow ? theme.textColor : theme.textDim;
+                        ctx.font = isNow ? "400 13px Montserrat" : "200 9px Montserrat";
+                        ctx.save();
+                        ctx.translate(Math.cos(a)*r, Math.sin(a)*r);
+                        ctx.rotate(a + Math.PI/2);
+                        ctx.fillText(label, 0, 0);
+                        ctx.restore();
+                    });
+                }
+
+                if (ring.type === 'lunar') {
+                    const currentPhase = getMoonPhase(now);
+                    const moonR = w/2 - 3;
+                    // Moon colors based on theme
+                    const moonBg = theme.bgColor === '#ffffff' || theme.bgColor === '#f0f0f0' || theme.bgColor === '#e0e5ec' || theme.bgColor === '#dfe6e9' ? '#ddd' : '#111';
+                    const moonActive = theme.textColor;
+                    const moonInactive = theme.textDim;
+
+                    for(let i=0; i<8; i++) {
+                        const a = (i/8) * Math.PI*2 - Math.PI/2;
+                        let pDiff = Math.abs((i/8) - currentPhase);
+                        if (pDiff > 0.5) pDiff = 1 - pDiff;
+                        const isActive = pDiff < 0.06;
+
+                        ctx.save();
+                        ctx.translate(Math.cos(a)*r, Math.sin(a)*r);
+
+                        // Background circle
+                        ctx.beginPath();
+                        ctx.arc(0, 0, moonR, 0, Math.PI*2);
+                        ctx.fillStyle = moonBg;
+                        ctx.fill();
+
+                        ctx.fillStyle = isActive ? moonActive : moonInactive;
+
+                        if (i === 0) {
+                            // New Moon - just background circle (already drawn)
+                        } else if (i === 4) {
+                            // Full Moon - filled circle
+                            ctx.beginPath();
+                            ctx.arc(0, 0, moonR, 0, Math.PI*2);
+                            ctx.fill();
+                        } else if (i === 2) {
+                            // First Quarter - right half
+                            ctx.beginPath();
+                            ctx.arc(0, 0, moonR, -Math.PI/2, Math.PI/2);
+                            ctx.fill();
+                        } else if (i === 6) {
+                            // Last Quarter - left half
+                            ctx.beginPath();
+                            ctx.arc(0, 0, moonR, Math.PI/2, -Math.PI/2);
+                            ctx.fill();
+                        } else {
+                            // Crescents (1,3,5,7) - small dot
+                            ctx.beginPath();
+                            ctx.arc(0, 0, 3, 0, Math.PI*2);
+                            ctx.fill();
+                        }
+
+                        ctx.restore();
+                    }
+                }
+
+                if (ring.type === 'zodiac') {
+                    const zodiacColor = getRingColor(ring, theme);
+                    zodiacData.forEach((sign, i) => {
+                        const startA = (sign.start / 365) * Math.PI*2 - Math.PI/2;
+                        const signEnd = zodiacData[i+1] ? zodiacData[i+1].start : 365 + zodiacData[0].start;
+                        const isActiveSign = (dayOfYear >= sign.start && dayOfYear < signEnd) ||
+                                            (sign.name === "Capricorn" && (dayOfYear >= 356 || dayOfYear < 20));
+
+                        // Draw active sign highlight
+                        if (isActiveSign) {
+                            ctx.beginPath();
+                            ctx.arc(0, 0, r, startA, (signEnd/365)*Math.PI*2 - Math.PI/2);
+                            ctx.strokeStyle = zodiacColor;
+                            ctx.globalAlpha = 0.4;
+                            ctx.lineWidth = w;
+                            if (theme.glowEnabled) {
+                                ctx.shadowBlur = 10;
+                                ctx.shadowColor = zodiacColor;
+                            }
+                            ctx.stroke();
+                            ctx.shadowBlur = 0;
+                            ctx.globalAlpha = 1.0;
+                        }
+
+                        // Draw constellation
+                        ctx.save();
+                        const midA = startA + (Math.PI/12);
+                        ctx.translate(Math.cos(midA)*r, Math.sin(midA)*r);
+                        ctx.rotate(midA + Math.PI/2);
+
+                        // Reduced size for tighter constellation
+                        const s = w * 0.5;
+                        ctx.strokeStyle = isActiveSign ? theme.textColor : theme.textDim;
+                        ctx.lineWidth = isActiveSign ? 1.5 : 1;
+
+                        // Draw constellation lines
+                        ctx.beginPath();
+                        sign.lines.forEach(l => {
+                            const x1 = (sign.stars[l[0]][0] - 0.5) * s;
+                            const y1 = (sign.stars[l[0]][1] - 0.5) * s;
+                            const x2 = (sign.stars[l[1]][0] - 0.5) * s;
+                            const y2 = (sign.stars[l[1]][1] - 0.5) * s;
+                            ctx.moveTo(x1, y1);
+                            ctx.lineTo(x2, y2);
+                        });
+                        ctx.stroke();
+
+                        // Draw star dots
+                        sign.stars.forEach((star, si) => {
+                            ctx.beginPath();
+                            const sx = (star[0] - 0.5) * s;
+                            const sy = (star[1] - 0.5) * s;
+                            ctx.arc(sx, sy, isActiveSign ? 2 : 1.5, 0, Math.PI*2);
+                            ctx.fillStyle = isActiveSign ? theme.textColor : theme.textDim;
+                            ctx.fill();
+                        });
+
+                        ctx.restore();
+                    });
+                }
+
+                if (ring.type === 'events') {
+                    allEvents.forEach(ev => {
+                        const doy = (ev.date - new Date(2026,0,0)) / 86400000;
+                        const a = (doy / 365) * Math.PI*2 - Math.PI/2;
+                        const isToday = ev.date.toDateString() === now.toDateString();
+                        const eventColor = eventColors[ev.type] || getRingColor(ring, theme);
+
+                        ctx.beginPath();
+                        ctx.arc(Math.cos(a)*r, Math.sin(a)*r, isToday ? 6 : 4, 0, Math.PI*2);
+                        ctx.fillStyle = isToday ? theme.textColor : eventColor;
+                        if (isToday && theme.glowEnabled) {
+                            ctx.shadowBlur = 12;
+                            ctx.shadowColor = eventColor;
+                        }
+                        ctx.fill();
+                        ctx.shadowBlur = 0;
+                    });
+                }
+                ctx.restore();
+            });
+
+            // Enhanced theme-specific center pulse
+            const heartbeat = 1 - (ms / 1000);
+            const centerColor = theme.centerColor;
+            const style = theme.ringStyle;
+
+            // Parse center color for rgba
+            const hexToRgb = (hex) => {
+                const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+                return result ? {
+                    r: parseInt(result[1], 16),
+                    g: parseInt(result[2], 16),
+                    b: parseInt(result[3], 16)
+                } : {r: 239, g: 68, b: 68};
+            };
+            const rgb = hexToRgb(centerColor);
+
+            if (style === 'glow' || style === 'aurora') {
+                // Bioluminescent / Aurora: Multi-layered expanding pulse
+                for (let i = 0; i < 3; i++) {
+                    const layer = (heartbeat + i * 0.33) % 1;
+                    const size = maxR * (0.03 + layer * 0.08);
+                    const alpha = (1 - layer) * 0.6;
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, size, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+                    ctx.shadowBlur = 30 * (1 - layer);
+                    ctx.shadowColor = centerColor;
+                    ctx.fill();
+                }
+                ctx.shadowBlur = 0;
+            } else if (style === 'beveled') {
+                // Skeuomorphic: Solid metallic orb with 3D highlights
+                const baseSize = maxR * 0.05;
+                // Outer shadow
+                ctx.beginPath();
+                ctx.arc(cx, cy, baseSize + 2, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.fill();
+                // Main orb
+                const gradient = ctx.createRadialGradient(cx - baseSize * 0.3, cy - baseSize * 0.3, 0, cx, cy, baseSize);
+                gradient.addColorStop(0, `rgba(${rgb.r + 40}, ${rgb.g + 40}, ${rgb.b + 40}, 1)`);
+                gradient.addColorStop(0.7, centerColor);
+                gradient.addColorStop(1, `rgba(${Math.max(0, rgb.r - 40)}, ${Math.max(0, rgb.g - 40)}, ${Math.max(0, rgb.b - 40)}, 1)`);
+                ctx.beginPath();
+                ctx.arc(cx, cy, baseSize, 0, Math.PI * 2);
+                ctx.fillStyle = gradient;
+                ctx.fill();
+                // Pulsing glow ring
+                ctx.beginPath();
+                ctx.arc(cx, cy, baseSize * (1 + heartbeat * 0.3), 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${heartbeat * 0.4})`;
+                ctx.lineWidth = 3;
+                if (theme.glowEnabled) {
+                    ctx.shadowBlur = 15 * heartbeat;
+                    ctx.shadowColor = centerColor;
+                }
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+            } else if (style === 'cockpit') {
+                // Cockpit: CRT scanline pulse with digital artifacts
+                const baseSize = maxR * 0.04;
+                // Main glow
+                for (let i = 0; i < 4; i++) {
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, baseSize + i * 4, 0, Math.PI * 2);
+                    ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${(1 - i * 0.2) * heartbeat * 0.8})`;
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+                // Core dot
+                ctx.beginPath();
+                ctx.arc(cx, cy, baseSize * 0.6, 0, Math.PI * 2);
+                ctx.fillStyle = centerColor;
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = centerColor;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                // Scanline effect
+                ctx.globalAlpha = 0.3 * heartbeat;
+                ctx.fillStyle = centerColor;
+                ctx.fillRect(cx - baseSize * 2, cy - 1 + (heartbeat * 8), baseSize * 4, 2);
+                ctx.globalAlpha = 1.0;
+            } else if (style === 'neumorphic' || style === 'neumorphic-dark') {
+                // Neumorphic: Soft embossed pulse
+                const baseSize = maxR * 0.045;
+                // Outer inset shadow
+                ctx.beginPath();
+                ctx.arc(cx, cy, baseSize + 3, 0, Math.PI * 2);
+                ctx.fillStyle = theme.neuDarkShadow;
+                ctx.shadowBlur = 6;
+                ctx.shadowColor = theme.neuDarkShadow;
+                ctx.shadowOffsetX = 2;
+                ctx.shadowOffsetY = 2;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 0;
+                // Main core with gradient
+                const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, baseSize);
+                gradient.addColorStop(0, centerColor);
+                gradient.addColorStop(1, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${0.4 + heartbeat * 0.6})`);
+                ctx.beginPath();
+                ctx.arc(cx, cy, baseSize, 0, Math.PI * 2);
+                ctx.fillStyle = gradient;
+                ctx.fill();
+            } else if (style === 'flat' || style === 'bold') {
+                // Swiss/Flat: Clean geometric pulse
+                const baseSize = maxR * 0.035;
+                // Outer ring
+                ctx.beginPath();
+                ctx.arc(cx, cy, baseSize * (1.5 + heartbeat * 0.5), 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${heartbeat * 0.6})`;
+                ctx.lineWidth = style === 'bold' ? 4 : 2;
+                ctx.stroke();
+                // Solid core
+                ctx.beginPath();
+                ctx.arc(cx, cy, baseSize, 0, Math.PI * 2);
+                ctx.fillStyle = centerColor;
+                ctx.fill();
+            } else if (style === 'soft') {
+                // Glass Frost: Subtle diffuse pulse
+                const baseSize = maxR * 0.04;
+                ctx.beginPath();
+                ctx.arc(cx, cy, baseSize, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${0.4 + heartbeat * 0.4})`;
+                ctx.shadowBlur = 12 * heartbeat;
+                ctx.shadowColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.6)`;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            } else {
+                // Default: Simple pulsing orb
+                const baseSize = maxR * 0.04;
+                ctx.beginPath();
+                ctx.arc(cx, cy, baseSize, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${0.3 + heartbeat * 0.5})`;
+                if (theme.glowEnabled) {
+                    ctx.shadowBlur = 20 * heartbeat;
+                    ctx.shadowColor = centerColor;
+                }
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+
+            // Swiss Railway second hand
+            if (theme.secondHand) {
+                const secAngle = (sec / 60) * Math.PI * 2 - Math.PI/2;
+                ctx.save();
+                ctx.translate(cx, cy);
+                ctx.rotate(secAngle);
+                // Second hand line
+                ctx.beginPath();
+                ctx.moveTo(0, maxR * 0.05);
+                ctx.lineTo(0, -maxR * 0.7);
+                ctx.strokeStyle = theme.centerColor;
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                // Lollipop end
+                ctx.beginPath();
+                ctx.arc(0, -maxR * 0.65, 8, 0, Math.PI*2);
+                ctx.fillStyle = theme.centerColor;
+                ctx.fill();
+                ctx.restore();
+            }
+
+            if (interactionPos) {
+                const dx = interactionPos.x - cx; const dy = interactionPos.y - cy;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                const screenAngle = Math.atan2(dy, dx) + Math.PI/2;
+                let normScreenAngle = screenAngle < 0 ? screenAngle + Math.PI*2 : screenAngle;
+                hoveredRingId = null; hoveredSegmentIdx = null;
+                rings.forEach(ring => {
+                    const r = ring.r * maxR;
+                    if (Math.abs(dist - r) < ring.w + 10) {
+                        hoveredRingId = ring.id;
+                        let rv = 0;
+                        if (ring.id === 'min') rv = minProgress/60;
+                        else if (ring.id === 'hr') rv = hrProgress/24;
+                        else if (ring.id === 'wday') rv = (now.getDay() + hrProgress/24)/7;
+                        else if (ring.id === 'day') rv = (now.getDate()-1+hrProgress/24)/31;
+                        else if (ring.id === 'month') rv = (now.getMonth() + (now.getDate()-1)/31)/12;
+                        else if (['lunar', 'zodiac', 'events'].includes(ring.type)) rv = yearProgress;
+                        let rot = ring.static ? 0 : -rv * Math.PI * 2;
+                        let dataA = normScreenAngle - rot;
+                        while (dataA < 0) dataA += Math.PI*2; while (dataA > Math.PI*2) dataA -= Math.PI*2;
+                        hoveredSegmentIdx = Math.floor((dataA / (Math.PI*2)) * ring.divisions);
+                        showTooltipContent(ring, hoveredSegmentIdx, interactionPos.x, interactionPos.y, dataA);
+                    }
+                });
+                if (!hoveredRingId) hideTooltip();
+            }
+            requestAnimationFrame(draw);
+        }
+
+        function showTooltipContent(ring, idx, x, y, dataA) {
+            tooltip.style.display = 'block';
+            if (window.innerWidth > 768) { tooltip.style.left = x + 'px'; tooltip.style.top = y + 'px'; }
+            let title = ring.id.toUpperCase(); let body = `Index: ${idx + 1}`;
+            if (ring.id === 'month' && ring.labels[idx]) { title = "MONTH"; body = ring.labels[idx]; }
+            else if (ring.id === 'wday' && ring.labels[idx]) { title = "WEEKDAY"; body = ring.labels[idx]; }
+            else if (ring.type === 'zodiac') {
+                const dayFromA = (dataA / (Math.PI*2)) * 365;
+                const sign = zodiacData.find((s,i) => {
+                    const next = zodiacData[i+1] ? zodiacData[i+1].start : 365 + zodiacData[0].start;
+                    return (dayFromA >= s.start && dayFromA < next) || (s.name === "Capricorn" && (dayFromA >= 356 || dayFromA < 20));
+                }) || zodiacData[0];
+                title = "ZODIAC"; body = sign.name;
+            } else if (ring.type === 'lunar') {
+                const p = ["New Moon", "Waxing Crescent", "First Quarter", "Waxing Gibbous", "Full Moon", "Waning Gibbous", "Last Quarter", "Waning Crescent"];
+                title = "LUNAR PHASE"; body = p[Math.floor((dataA / (Math.PI*2)) * 8) % 8];
+            } else if (ring.type === 'events') {
+                const dCheck = (dataA / (Math.PI*2)) * 365;
+                let closest = null; let minD = 3;
+                allEvents.forEach(ev => {
+                    const ed = (ev.date - new Date(2026,0,0)) / 86400000;
+                    let d = Math.abs(ed - dCheck); if (d > 300) d = 365 - d;
+                    if (d < minD) { minD = d; closest = ev; }
+                });
+                if (closest) {
+                    const typeColor = eventColors[closest.type] || '#3b82f6';
+                    title = closest.name;
+                    body = `Date: ${closest.date.toLocaleDateString()}<br>Type: <span style="color:${typeColor}">${closest.type.toUpperCase()}</span>`;
+                }
+                else { title = "EVENTS"; body = "Hover markers for 2026 milestones"; }
+            } else if (ring.id === 'hr') { title = "HOUR"; body = `${idx}:00`; }
+            else if (ring.id === 'min') { title = "MINUTE"; body = `${idx}`; }
+            tooltip.innerHTML = `<h3>${title}</h3><div class="content">${body}</div>`;
+        }
+
+        function hideTooltip() { tooltip.style.display = 'none'; hoveredRingId = null; hoveredSegmentIdx = null; }
+        function setPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const cx_ = e.touches ? e.touches[0].clientX : e.clientX;
+            const cy_ = e.touches ? e.touches[0].clientY : e.clientY;
+            interactionPos = { x: cx_ - rect.left, y: cy_ - rect.top };
+        }
+        canvas.addEventListener('mousemove', setPos);
+        canvas.addEventListener('touchstart', e => setPos(e));
+        canvas.addEventListener('touchmove', e => { e.preventDefault(); setPos(e); }, {passive: false});
+        canvas.addEventListener('touchend', hideTooltip);
+        canvas.addEventListener('mouseleave', hideTooltip);
+        requestAnimationFrame(draw);
+
+        const infoIcon = document.getElementById('infoIcon');
+        const infoPopup = document.getElementById('infoPopup');
+        infoIcon.addEventListener('click', (e) => { e.preventDefault(); infoPopup.classList.toggle('visible'); });
+    </script>
+</body>
+</html>
