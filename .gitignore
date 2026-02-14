@@ -1,11 +1,24 @@
-# OS
-.DS_Store
-Thumbs.db
+# Claude/MCP infrastructure (not for public repos)
+.claude/
+.playwright-mcp/
+CLAUDE.md
 
-# Editor
-.vscode/
-.idea/
+# Agent-generated artifacts
+NEXT_STEPS.md
+STYLE_LINKS.md
+CRITIC.md
+ONBOARDING_IMPLEMENTATION.md
+PROGRESS_STATUS.md
+IMPLEMENTATION_STATUS.md
+SESSION_LOG.md
+WORK_LOG.md
+AGENT_REPORT.md
+*_STATUS.md
+*_PROGRESS.md
+SUGGESTIONS.md
 
-# Temp
-*.tmp
-*.log
+# Conversation history
+prior.md
+
+# Backup files
+*.backup
